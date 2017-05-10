@@ -1,0 +1,36 @@
+language: node_js
+
+node_js:
+  - 4.2.3
+
+env:
+  global:
+    # replace with your docker registry account name (e.g. Amazon ECR)
+    - DOCKER_ACC=679404489841.dkr.ecr.us-east-1.amazonaws.com
+    - DOCKER_REPO_NODE_APP=deploy-eb-docker-multi-container-node
+    - DOCKER_REPO_TOMCAT_APP=deploy-eb-docker-multi-container-tomcat
+    - AWS_DEFAULT_REGION=us-east-1
+    - IMAGE_TAG=$BRANCH.$BUILD_NUMBER
+
+build:
+  ci:
+    # build docker images and push to registry
+    # Node app
+    - docker build -t $DOCKER_ACC/$DOCKER_REPO_NODE_APP:$IMAGE_TAG $SHIPPABLE_BUILD_DIR/node-app
+    - docker push $DOCKER_ACC/$DOCKER_REPO_NODE_APP:$IMAGE_TAG
+    # Tomcat app
+    - docker build -t $DOCKER_ACC/$DOCKER_REPO_TOMCAT_APP:$IMAGE_TAG $SHIPPABLE_BUILD_DIR/tomcat-app
+    - docker push $DOCKER_ACC/$DOCKER_REPO_TOMCAT_APP:$IMAGE_TAG
+
+  on_success:
+    # save latest image versions to state
+    - echo versionName=$IMAGE_TAG > /build/state/deploy_eb_docker_multi_container_img_node.env
+    - echo versionName=$IMAGE_TAG > /build/state/deploy_eb_docker_multi_container_img_tomcat.env
+    # ensure last image always triggers updated versionName file
+    - echo commitSha=$COMMIT_SHA >> /build/state/deploy_eb_docker_multi_container_img_tomcat.env
+
+integrations:
+  hub:
+    # replace with your ECR integration name
+    - integrationName: dr-ecr
+      type: ecr

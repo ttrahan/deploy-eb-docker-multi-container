@@ -1,0 +1,96 @@
+jobs:
+
+######################### CI/CD JOBS #########################
+
+# runCI job that builds and pushes artifact to S3
+  - name: deploy-eb-docker-multi-container_runCI
+    type: runCI
+    steps:
+      - OUT: deploy_eb_docker_multi_container_img_node
+      - OUT: deploy_eb_docker_multi_container_img_tomcat
+
+# runCLI job that deploys image in ECR to Elastic Beanstalk - TEST
+  - name: deploy_eb_docker_multi_container_test_deploy
+    type: runCLI
+    steps:
+      - IN: deploy_eb_docker_multi_container_img_node
+        switch: off
+      - IN: deploy_eb_docker_multi_container_img_tomcat
+      - IN: deploy_eb_docker_multi_container_awscli
+      - IN: deploy_eb_docker_multi_container_gitrepo
+        switch: off
+      - IN: deploy_eb_docker_multi_container_params
+      - IN: deploy_eb_docker_multi_container_params_test
+      - TASK:
+        # assign Shippable-injected variables to variables used in templates
+        - script: > 
+            export 
+            IMAGE_REPO_NODE=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_IMG_NODE_SOURCENAME 
+            IMAGE_TAG_NODE=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_IMG_NODE_VERSIONNAME
+            IMAGE_REPO_TOMCAT=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_IMG_TOMCAT_SOURCENAME 
+            IMAGE_TAG_TOMCAT=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_IMG_TOMCAT_VERSIONNAME
+            DEPLOY_EB_APPLICATION=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_PARAMS_PARAMS_AWS_EB_APPLICATION
+            ENVIRONMENT=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_PARAMS_TEST_PARAMS_ENVIRONMENT
+        # update template files with values in env variables
+        - script: cd $DEPLOY_EB_DOCKER_MULTI_CONTAINER_GITREPO_STATE
+        - script: echo "updating templates with environment variables"
+        - script: shippable_replace Dockerrun.aws.json
+        - script: cat Dockerrun.aws.json 
+        # eb deploy uses latest commits only, so commit updated Dockerrun.aws.json
+        - script: |
+            git add Dockerrun.aws.json
+            git commit -m 'updated Dockerrun.aws.json template' Dockerrun.aws.json
+        # initialize eb cli for app deploy_eb_docker_multi_container
+        - script: echo "initializing EB"
+        - script: >
+            eb init deploy-eb-docker-multi-container
+            --platform docker-1.12.6
+            --region us-east-1
+            --keyname kp-us-east-1
+        # deploy latest image to elastic beanstalk
+        - script: echo "Deploying new version to Elastic Beanstalk"
+        - script: eb deploy --debug $DEPLOY_EB_DOCKER_MULTI_CONTAINER_PARAMS_TEST_PARAMS_AWS_EB_ENVIRONMENT
+        # save latest deployment to state
+        - script: echo -e "export IMAGE_REPO_NODE=$IMAGE_REPO_NODE\nexport IMAGE_TAG_NODE=$IMAGE_TAG_NODE" >> $DEPLOY_EB_DOCKER_MULTI_CONTAINER_TEST_DEPLOY_STATE/latest_test_deploy.env
+        - script: echo -e "export IMAGE_REPO_TOMCAT=$IMAGE_REPO_TOMCAT\nexport IMAGE_TAG_TOMCAT=$IMAGE_TAG_TOMCAT" >> $DEPLOY_EB_DOCKER_MULTI_CONTAINER_TEST_DEPLOY_STATE/latest_test_deploy.env
+
+# runCLI job that deploys image in ECR to Elastic Beanstalk
+# based on previous deployment to TEST environment
+  - name: deploy_eb_docker_multi_container_prod_deploy
+    type: runCLI
+    steps:
+      - IN: deploy_eb_docker_multi_container_test_deploy
+        switch: off
+      - IN: deploy_eb_docker_multi_container_gitrepo
+        switch: off
+      - IN: deploy_eb_docker_multi_container_awscli
+      - IN: deploy_eb_docker_multi_container_params
+      - IN: deploy_eb_docker_multi_container_params_prod
+      - TASK:
+        # load last build version deployed to test from incoming state file
+        - script: source $DEPLOY_EB_DOCKER_MULTI_CONTAINER_TEST_DEPLOY_STATE/latest_test_deploy.env
+        # assign Shippable-injected variables to variables used in templates
+        - script: >
+            export 
+            EB_APPLICATION=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_PARAMS_PARAMS_AWS_EB_APPLICATION
+            ENVIRONMENT=$DEPLOY_EB_DOCKER_MULTI_CONTAINER_PARAMS_PROD_PARAMS_ENVIRONMENT 
+        # update template files with values in env variables
+        - script: cd $DEPLOY_EB_DOCKER_MULTI_CONTAINER_GITREPO_STATE
+        - script: echo "updating templates with environment variables"
+        - script: shippable_replace Dockerrun.aws.json
+        - script: cat Dockerrun.aws.json 
+        # eb deploy uses latest commits only, so commit updated Dockerrun.aws.json
+        - script: |
+            git add Dockerrun.aws.json
+            git commit -m 'updated Dockerrun.aws.json template' Dockerrun.aws.json
+        # initialize eb cli for app deploy_eb_docker_multi_container
+        - script: echo "initializing EB"
+        - script: >
+            eb init $EB_APPLICATION
+            --platform docker-1.12.6
+            --region us-east-1
+            --keyname kp-us-east-1
+        # deploy latest image to elastic beanstalk
+        - script: echo "Deploying new version to Elastic Beanstalk"
+        - script: eb deploy --debug $DEPLOY_EB_DOCKER_MULTI_CONTAINER_PARAMS_PROD_PARAMS_AWS_EB_ENVIRONMENT
+

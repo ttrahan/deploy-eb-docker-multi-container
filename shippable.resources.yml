@@ -1,0 +1,66 @@
+resources:
+# gitRepo for scripts/config files
+  - name: deploy_eb_docker_multi_container_gitrepo
+    type: gitRepo
+    # replace with your SCM integration, e.g. GitHub
+    integration: dr-github 
+    pointer:
+      # replace with your git repo account
+      sourceName: devops-recipes/deploy-eb-docker-multi-container 
+      branch: master
+  
+# docker image resource NODE APP
+  - name: deploy_eb_docker_multi_container_img_node
+    type: image
+    integration: dr-ecr
+    pointer:
+      # replace with your docker registry URI
+      sourceName: 679404489841.dkr.ecr.us-east-1.amazonaws.com/deploy-eb-docker-multi-container-node
+    seed:
+      versionName: master.5
+
+# docker image resource TOMCAT APP
+  - name: deploy_eb_docker_multi_container_img_tomcat
+    type: image
+    # replace with your ECR integration 
+    integration: dr-ecr 
+    pointer:
+      # replace with your docker registry URI
+      sourceName: 679404489841.dkr.ecr.us-east-1.amazonaws.com/deploy-eb-docker-multi-container-tomcat
+    seed:
+      versionName: master.5
+
+# aws CLI config
+  - name: deploy_eb_docker_multi_container_awscli
+    type: cliConfig
+    # replace with your AWS integration
+    integration: dr-aws 
+    pointer:
+      region: 1
+
+# params shared across for all environments 
+  - name: deploy_eb_docker_multi_container_params
+    type: params
+    version:
+      params:
+        # replace with your application name
+        AWS_EB_APPLICATION: "deploy-eb-docker-multi-container" 
+
+# params for TEST environment 
+  - name: deploy_eb_docker_multi_container_params_test
+    type: params
+    version:
+      params:
+        ENVIRONMENT: "test"
+        # replace with your environment name
+        AWS_EB_ENVIRONMENT: "test-01" 
+
+# params for PROD environment 
+  - name: deploy_eb_docker_multi_container_params_prod
+    type: params
+    version:
+      params:
+        ENVIRONMENT: "prod"
+        # replace with your environment name
+        AWS_EB_ENVIRONMENT: "prod-01"
+

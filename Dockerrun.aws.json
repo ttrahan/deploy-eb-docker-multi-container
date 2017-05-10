@@ -1,0 +1,35 @@
+{
+  "AWSEBDockerrunVersion": 2,
+  "containerDefinitions": [
+    {
+      "name": "node-app",
+      "image": "$IMAGE_REPO_NODE:$IMAGE_TAG_NODE",
+      "essential": true,
+      "memory": 128,
+      "portMappings": [
+        {
+          "hostPort": 8000,
+          "containerPort": 8000
+        }
+      ],
+      "mountPoints": []
+    },
+    {
+      "name": "tomcat-app",
+      "image": "$IMAGE_REPO_TOMCAT:$IMAGE_TAG_TOMCAT",
+      "essential": true,
+      "memory": 256,
+      "portMappings": [
+        {
+          "hostPort": 8080,
+          "containerPort": 8080
+        }
+      ],
+      "links": [
+        "node-app"
+      ],
+      "mountPoints": []
+    }
+  ]
+}
+
