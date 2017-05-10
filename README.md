@@ -1,7 +1,6 @@
 ![AyeAye](https://github.com/shippableSamples/node-build-push-docker-hub/blob/master/public/resources/images/captain.png)
 
-# Sample Elastic Beanstalk Multi Container 
-# Node.js + Tomcat Demo App
+# Sample Elastic Beanstalk multi-container Node.js + Tomcat Demo App
 
 A simple demo to deploy two containers to a multi-container environment listening 
 on different ports to Amazon Elastic Beanstalk using Shippable.
